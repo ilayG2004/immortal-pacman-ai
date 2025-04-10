@@ -1,5 +1,4 @@
-import Node;
-import jdk.nashorn.internal.ir.Block;
+import java.util.Objects;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -13,16 +12,6 @@ import javax.swing.*;
 
 
 public class AstarAgent {
-  private HashSet<Block> pellets = new HashSet<>();
-  private Hashtable<String, Block> ghosts = new Hashtable<>();
-  private HashSet<Block> walls = new HashSet<>();
-
-  public AstarAgent(HashSet<Block> foods, Hashtable<String, Block> enemies, HashSet<Block> walls) {
-    this.pellets = foods;
-    this.ghosts = enemies;
-    this.walls = walls;
-  }
-
 
   public int manhattanDistance(int x1, int y1, int x2, int y2) {
     return Math.abs(x1-x2) + Math.abs(y1-y2);
@@ -35,16 +24,17 @@ public class AstarAgent {
     int pacX = pacman.x/32;
     int pacY = pacman.y/32;
 
-    for (Block pellet : pellets) {
+    for (Block pellet : PacMan.pellets) {
       int pX = pellet.x/32;
       int pY = pellet.y/32;
       int dist = manhattanDistance(pacX, pacY, pX, pY);
       if (dist < closestPelletDist) {
         closestPelletDist = dist;
         closestPelletCoords.setCoords(pX, pY);
+        System.out.println(pX + " " + pY);
       }
     }
-
+    //System.out.println(closestPelletCoords.x +  " " + closestPelletCoords.y);
     return closestPelletCoords;
   }
 
@@ -65,7 +55,7 @@ public class AstarAgent {
       boolean blocked = false;
 
       // If it's a tile blocked by a wall. Do not include. Otherwise it's fine
-      for (Block wall : walls) {
+      for (Block wall : PacMan.walls) {
         if (wall.x == nx && wall.y == ny) {
           blocked = true;
           break;
@@ -77,10 +67,11 @@ public class AstarAgent {
       } else {blocked = false; continue; }
 
     }
+    return results;
   }
   public float evaluateRisk(Block pacman, Node neighbor, Node goal) {
     float cost = 0;
-    for (Block ghost : ghosts.values()) {
+    for (Block ghost : PacMan.ghosts.values()) {
       int dist = manhattanDistance((ghost.x/32), (ghost.y/32), neighbor.x, neighbor.y);
       cost += (dist*1.2);
     }
