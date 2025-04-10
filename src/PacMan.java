@@ -1,9 +1,11 @@
 import java.awt.*;
 import java.awt.event.*;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Random;
 import javax.swing.*;
+import AstarAgent.java;
 
 public class PacMan extends JPanel implements ActionListener, KeyListener {
   class Block {
@@ -272,11 +274,16 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     }
   }
 
+  // 
+  public void executeInstructions() {
+    Block closestPellet = greedyCloses
+    HashMap<Node, Character> instructions = Astar(pacman, closestPellet);
+  }
+
   // MOVEMENT FOR PACMAN & GHOSTS
   public void move() {
     pacman.x += pacman.velocityX;
     pacman.y += pacman.velocityY;
-
     
 
     //Checks for collisions while moving
