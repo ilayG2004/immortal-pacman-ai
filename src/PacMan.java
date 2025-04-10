@@ -5,88 +5,8 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Random;
 import javax.swing.*;
-import AstarAgent.java;
 
 public class PacMan extends JPanel implements ActionListener, KeyListener {
-  class Block {
-    int x;
-    int y;
-    int width;
-    int height;
-    Image image;
-    boolean isPlayer = true;
-
-    int startX;
-    int startY;
-    char direction = 'L';
-    int velocityX = 0;
-    int velocityY = 0;
-   
-
-    Block(Image image, int x, int y, int width, int height, boolean isPlayer) {
-      this.image = image;
-      this.x = x;
-      this.y = y;
-      this.width = width;
-      this.height = height;
-      this.startX = x;
-      this.startY = y;
-      this.isPlayer = isPlayer;
-    }
-
-    public void reset() {
-      this.x = this.startX;
-      this.y = this.startY;
-    }
-
-    public void setDirection(char direction) {
-      char prevDirection = this.direction;
-      this.direction = direction;
-      updateVelocity();
-
-      this.x += this.velocityX;
-      this.y += this.velocityY;
-
-      //Keeps us from changing directions into a collideable object
-      for (Block wall : walls) {
-        if (collision(this, wall)) {
-          this.x -= this.velocityX;
-          this.y -= this.velocityY;
-          this.direction = prevDirection;
-          updateVelocity();
-        }
-      }
-    }
-    public void updateVelocity() {
-      int moveSpeed;
-      if (this.isPlayer) {
-        moveSpeed = (tileSize/4);
-      } else {
-        moveSpeed = (tileSize/8);
-      }
-      if (this.direction == 'U') {
-        this.velocityX = 0;
-        this.velocityY = -(moveSpeed); // 8 pixel per frame. 20 frames per second
-        if (this.isPlayer) { this.setSprite(pacmanUpImage); }
-      } else if (this.direction == 'D') {
-        this.velocityX = 0;
-        this.velocityY = (moveSpeed);
-        if (this.isPlayer) {this.setSprite(pacmanDownImage);} 
-      } else if (this.direction == 'R') {
-        this.velocityX = (moveSpeed);
-        this.velocityY = 0;
-        if (this.isPlayer) {this.setSprite(pacmanRightImage);}
-      } else if (this.direction == 'L') {
-        this.velocityX = -(moveSpeed);
-        this.velocityY = 0;
-        if (this.isPlayer) {this.setSprite(pacmanLeftImage);}
-      } 
-
-    }
-    public void setSprite(Image image) {
-      this.image = image;
-    }
-  }
   private int rowCount = 21;
   private int colCount = 19;
   private int tileSize = 32;
@@ -105,15 +25,16 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
   private Image pacmanLeftImage;
   private Image pacmanRightImage;
 
-  HashSet<Block> walls;
-  HashSet<Block> pellets;
-  Hashtable<String, Block> ghosts;
+  public static HashSet<Block> walls;
+  public static HashSet<Block> pellets;
+  public static Hashtable<String, Block> ghosts;
   Block pacman;
   Timer gameloop;
   boolean firstFrame = true;
   int score = 0;
   int lives = 3;
   boolean gameOver = false;
+  boolean pathSet = false;
 
   //Ghosts: b = blue, o = orange, p = pink, r = red
   private String[] tileMap = {
@@ -124,9 +45,9 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     "X XX X XXXXX X XX X",
     "X    X       X    X",
     "XXXX XXXX XXXX XXXX",
-    "OOOX X       X XOOO",
+    "OOOX X   X   X XOOO",
     "XXXX X XXrXX X XXXX",
-    "O       bpo       O",
+    "O      XbpoX      O",
     "XXXX X XXXXX X XXXX",
     "OOOX X       X XOOO",
     "XXXX X XXXXX X XXXX",
@@ -174,7 +95,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
      * Hashset used for looking up pellet, or wall objects
      * Hashtable <name, block> used for looking up specific ghosts. Useful since each ghost has their own unique pathfinding AI
      */
-
+    
     loadMap();
     gameloop = new Timer(50, this); // 20fps (1000/50)
     gameloop.start();
@@ -274,16 +195,75 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     }
   }
 
-  // 
+  /*
   public void executeInstructions() {
-    Block closestPellet = greedyCloses
+    Block closestPellet = greedyClose
     HashMap<Node, Character> instructions = Astar(pacman, closestPellet);
   }
+   */
 
+  public void movePacman() {
+    /*
+    pathSet = true;
+    AstarAgent pathfinder = new AstarAgent();
+    Node closestPellet = pathfinder.greedyClosestPellet(pacman);
+    System.out.println(closestPellet);
+    HashMap<Node, Character> path = pathfinder.Astar(pacman, closestPellet);
+    Node currCoord = new Node (pacman.x/32, pacman.y/32);
+    while (!currCoord.equals(closestPellet)) {
+      pacman.setDirection(path.get(currCoord));
+      currCoord = new Node (pacman.x/32, pacman.y/32);
+    }
+    //pathSet=false;
+    */
+    pathSet = true;
+    AstarAgent pathfinder = new AstarAgent();
+    Node closestPellet = pathfinder.greedyClosestPellet(pacman);
+    int bestDist = Integer.MAX_VALUE;
+    char bestDir = 'H';
+    int[][] toMove = {{0,-1}, //U
+                    {0, 1}, //D
+                    {1, 0}, //R
+                    {-1, 0}}; //L
+    int ghostX = pacman.x/32;
+    int ghostY = pacman.y/32;
+    for (char dir : getValidDirections(pacman.direction)) {
+      int nx = 0;
+      int ny= 0;
+      if (dir == 'U') {
+          nx = toMove[0][0];
+          ny = toMove[0][1];
+      } else if (dir == 'D') {
+          nx = toMove[1][0];
+          ny = toMove[1][1];
+      } else if (dir == 'R') {
+          nx = toMove[2][0];
+          ny = toMove[2][1];
+      } else if (dir == 'L') {
+          nx = toMove[3][0];
+          ny = toMove[3][1];
+      }
+      if (isValidTile(ghostX+nx, ghostY+ny)) {
+        int projectedDistance = manhattanDistance(ghostX, ghostY, closestPellet.x, closestPellet.y);
+        //System.out.println(projectedDistance + "  " + closestPellet.x + "  " + closestPellet.y);
+        if (projectedDistance < bestDist) {
+          bestDist = projectedDistance;
+          bestDir = dir;
+        }
+      } 
+    }
+    pacman.setDirection(bestDir);
+    pathSet = false;
+  }
   // MOVEMENT FOR PACMAN & GHOSTS
   public void move() {
+    screenWrapCheck(pacman);
     pacman.x += pacman.velocityX;
     pacman.y += pacman.velocityY;
+    if (pathSet == false) {
+      movePacman();
+    }
+    
     
 
     //Checks for collisions while moving
@@ -310,6 +290,7 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
           break;
         }
       } 
+      screenWrapCheck(ghost);
     }
 
     // Pellet collisions
@@ -342,15 +323,15 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
     }
   }
 
-  public void screenWrap(Block entity) {
-    if ((entity.x/32 == 0) && (entity.y/32 ==9)) {
-      entity.setDirection('L');
+  public void screenWrapCheck(Block entity) {
+    if ((entity.x/32 < 0) && (entity.y/32 == 9) ) {
       entity.x = 18*32;
       entity.y = 9*32;
-    } else if ((entity.x/32) == 18 && (entity.y/32 == 9)) {
-      entity.setDirection('R');
-      entity.x = 0*32;
+      entity.setDirection('L');
+    } else if ((entity.x/32 > 18) && (entity.y/32 == 9)) {
+      entity.x = 0;
       entity.y = 9*32;
+      entity.setDirection('R');
     }
   }
 
@@ -492,4 +473,3 @@ public class PacMan extends JPanel implements ActionListener, KeyListener {
       return bestDir;
   }
 }
-
